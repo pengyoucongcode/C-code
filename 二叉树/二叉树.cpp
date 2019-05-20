@@ -14,22 +14,13 @@ typedef struct biTrNode
 	biTrNode* parent;//父节点指针域
 }*BTree;
 
-//辅助构建二叉树的链表节点
-typedef struct StackNode
-{
-	biTrNode* nodePtr; //二叉树节点
-	char flag; //用于判定创建又子树还是左子树的标志
-	StackNode *next; //链表下一节点
-	StackNode *pre; //链表前一节点
-}*StackPtr;
-
-//==============链栈相关操作
-//链栈
 typedef struct LStack
 {
 	BTree elem; //数据域
+	char flag;
 	LStack* next; //指针域
 }*LinkStack;
+LinkStack treestackhead;
 //链栈初始化
 void InitLS(LinkStack &ls)
 {
@@ -42,6 +33,7 @@ void push(LinkStack &ls, BTree e)
 	LinkStack p = new LStack; //申请新节点
 	p->elem = new biTrNode;
 	p->elem = e; //将将要压栈的数据放入新节点数据域
+	p->flag = 'L';
 	p->next = ls; //将新节点压入栈中
 	ls = p; //将栈的头指针移到新节点，以达到更新栈的操作
 }
@@ -82,100 +74,59 @@ void free(LinkStack ls)
 {
 	delete ls;
 }
-//==========================
-//===============二叉树相关操作
- //链表头结点
-StackPtr S, Head;
-//初始化链表
-void InitStack(StackPtr &s)
-{
-	s = new StackNode;
-	s->flag = 'L';
-	s->next = NULL;
-	s->pre = NULL;
-}
-//链表操作器
-StackNode *r = new StackNode;
+
 //二叉树根节点，便于子树构建完毕需要回到根节点的操作
 BTree root;
-//添加二叉树节点，使用先序规则
-void addNode(BTree &treeHead, int num)
+//添加树节点
+void addNode(BTree& treeHead, int num)
 {
-	if (S == NULL)
+	if (treestackhead == NULL)
 	{
-		cout << "错误，栈未初始化!" << endl;
+		cout << "栈未初始化，错误！" << endl;
 		exit(0);
 	}
 	else
 	{
-		if (S->next == NULL)
-		{
-			r = S;
-		}
 		if (treeHead == NULL)
 		{
-			StackNode *newS = new StackNode; //新建链表一个头节点
-			newS->next = NULL;
-			newS->pre = r;//头节点的前一个节点为链表地址
-			r->next = newS; //将节点添加到链表中
-			r = newS;
-			treeHead = new biTrNode; //初始化二叉树根节点，并将二叉树根节点的地址存在在链表头结点中
-			root = new biTrNode;
-			root = treeHead;
+			treeHead = new biTrNode;
+			treeHead->data = num;
+			treeHead->parent = NULL;
 			treeHead->lchild = NULL;
 			treeHead->rchild = NULL;
-			treeHead->parent = NULL;
-			r->nodePtr = new biTrNode;
-			r->nodePtr = treeHead;
-			r->nodePtr->data = num; //往根节点数据域添加数据
-			r->flag = 'L'; //指示下一步构造左子树
-			
+			root = new biTrNode;
+			root = treeHead;
+			push(treestackhead, treeHead);
 		}
-		else if(treeHead!=NULL)
+		else
 		{
-			BTree newnode = new biTrNode;  //创建一个二叉树节点
-			newnode->data = num; //往二叉树节点数据域添加数据
-			newnode->lchild = NULL;
-			newnode->rchild = NULL;
-			 if (r->flag == 'L') //判断当前链表中的二叉树节点是否需要构造左子树
+			if (treestackhead->flag == 'L')
 			{
-				r->nodePtr->lchild = new biTrNode;
-				r->nodePtr->lchild = newnode; //将新节点添加到二叉树的左子树中
-				newnode->parent = r->nodePtr; //左子树的父节点为当前节点
-				StackNode *newS = new StackNode; //创建链表新节点，用于存放二叉树下一步的构造信息
-				newS->next = NULL;
-				newS->pre = r;//链表新节点的前一个节点为链表操作器的所停留的当前节点
-				newS->nodePtr = new biTrNode;
-				newS->nodePtr = r->nodePtr->lchild; //将链表新节点的二叉树节点勾连到已构造好的左子树中
-				newS->flag = 'L';
-				r->next = newS; //使用链表操作器将新的链表节点添加到链表中
-				r = newS; //移动链表操作器的位置
+				BTree newnode = new biTrNode;
+				newnode->data = num;
+				newnode->parent = new biTrNode;
+				newnode->parent = treestackhead->elem;
+				newnode->lchild = NULL;
+				newnode->rchild = NULL;
+				treestackhead->elem->lchild = newnode;
+				treestackhead->flag = 'R';
+				push(treestackhead, newnode);
 			}
-			else if (r->flag == 'R')//判断当前链表中的二叉树节点是否需要构造右子树
+			if (treestackhead->flag == 'R')
 			{
-				 if (r->nodePtr == root) //如果要构造的是根节点的右子树
-				 {
-					 r->nodePtr->rchild = new biTrNode;
-					 r->nodePtr->rchild = newnode;//将新节点添加到二叉树的右子树中
-					 r->nodePtr->rchild->parent = r->nodePtr;//右子树的父节点为当前节点
-				 }
-				 else //构造普通右子树
-				 {
-					 r->nodePtr->rchild = new biTrNode;
-					 r->nodePtr->rchild = newnode;//将新节点添加到二叉树的右子树中
-					 newnode->parent = r->nodePtr;//右子树的父节点为当前节点
-				 }
-				StackNode *newS = new StackNode; // 创建链表新节点，用于存放二叉树下一步的构造信息
-				newS->next = NULL;
-				newS->pre = r;//链表新节点的前一个节点为链表操作器的所停留的当前节点
-				newS->nodePtr = new biTrNode;
-				newS->nodePtr = r->nodePtr->rchild;//将链表新节点的二叉树节点勾连到已构造好的右子树中
-				newS->flag = 'L';
-				r->next = newS;//使用链表操作器将新的链表节点添加到链表中
-				r = newS;//移动链表操作器的位置
+				BTree newnode = new biTrNode;
+				newnode->data = num;
+				newnode->parent = new biTrNode;
+				newnode->parent = treestackhead->elem;
+				newnode->lchild = NULL;
+				newnode->rchild = NULL;
+				treestackhead->elem->rchild = new biTrNode;
+				treestackhead->elem->rchild = newnode;
+				push(treestackhead, newnode);
 			}
 		}
 	}
+
 }
 //判断二叉树节点是否为叶子节点，是返回True，否则返回false
 bool IsLeaf(BTree t)
@@ -189,32 +140,37 @@ bool IsLeaf(BTree t)
 //处理二叉树不需要构造左子树或右子树
 void processEmptyData()
 {
-	if (r->flag == 'L') //如果是左子树不需要构造，只需将构造标志改为右子树
+	if (treestackhead->flag == 'L')
 	{
-		r->flag = 'R';
+		treestackhead->flag = 'R';
 	}
-	else if (r->flag == 'R')//如果是右子树不需要构造
+	else if (treestackhead->flag == 'R')
 	{
-		if (r->nodePtr->parent->rchild != NULL)
+		if (treestackhead->next->elem->rchild == NULL&& treestackhead->next->elem->lchild!=NULL)
 		{
-			if (IsLeaf(r->nodePtr->parent->lchild)) //两个if语句形成判断当前游离二叉树节点是处于左子树的右叶子处
+			BTree temp = new biTrNode;
+			pop(treestackhead, temp);
+		}
+		else if (treestackhead->next->elem->rchild != NULL && treestackhead->next->elem->lchild != NULL)
+		{
+			while (true)
 			{
-				r->pre = S->next;//将当前链表节点的前一个节点更改为头结点
-				r->nodePtr = root; //将当前游离二叉树节点移动到二叉树根节点处
+				if (treestackhead->next->next == NULL)
+				{
+					break;
+				}
+				BTree temp = new biTrNode;
+				pop(treestackhead, temp);
+				
 			}
 		}
-		r->nodePtr = r->pre->nodePtr; //普通情况下，当右子树不需要构造时，将链表操作器前移一位，
-										//使游离二叉树节点顺着以构造的二叉树前移一个节点
-		
+
 	}
 }
 //二叉树各个节点已构造完毕时所要进行的操作
 void processEndData()
 {
-	StackNode *end = r;
-	S = Head; //避免链表首元节点意外移动
-	r = S; //将链表操作器停放会链表首元结点
-	delete end;//释放对于链表节点
+	free(treestackhead);
 }
 //以先序规则构造二叉树
 void createBiTreeNonRecursive(BTree &treeHead)
@@ -222,9 +178,10 @@ void createBiTreeNonRecursive(BTree &treeHead)
 	int num;
 	bool keepRun = true;
 	treeHead = NULL;
-	InitStack(S);//初始化链表
-	Head = new StackNode;
-	Head = S;//标志链表首元节点地址
+	//InitStack(S);//初始化链表
+	//Head = new StackNode;
+	//Head = S;//标志链表首元节点地址
+	InitLS(treestackhead);
 	cout << "请按照构造规则输入二叉树的结点数据：" << endl;
 	while (keepRun)
 	{
